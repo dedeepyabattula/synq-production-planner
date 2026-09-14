@@ -4,7 +4,8 @@ import { Factory, Schedule, ImpactAnalysis } from './types';
 // In production, set VITE_API_URL to the deployed backend's URL
 // (e.g. https://your-backend.onrender.com/api). Falls back to localhost for
 // local development.
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+  export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_URL,
