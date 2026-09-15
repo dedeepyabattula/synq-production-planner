@@ -48,3 +48,39 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    _ensure_schema_patches()
+
+
+def _ensure_schema_patches():
+    """
+    Small, idempotent, additive column patches for fields added to a model
+    after a database was first created.
+
+    This project doesn't use a migration framework (Alembic) — normally
+    that's fine, because `create_all()` above creates any missing TABLES on
+    every startup. But it does NOT add new columns to a table that already
+    exists, and on a persistent database (Postgres on Vercel, unlike the
+    local SQLite file which effectively starts fresh) that matters: once the
+    `machines` table has been created once, later model changes like the
+    `repair_duration_minutes` column would otherwise never actually appear in
+    the live database, and every query touching it would fail.
+
+    Safe to call on every startup: it inspects the live schema first and only
+    adds a column if it's actually missing.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "machines" not in inspector.get_table_names():
+        return  # create_all() above just created it fresh, column included
+
+    existing_cols = {c["name"] for c in inspector.get_columns("machines")}
+    if "repair_duration_minutes" in existing_cols:
+        return
+
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("ALTER TABLE machines ADD COLUMN IF NOT EXISTS repair_duration_minutes FLOAT"))
+        elif engine.dialect.name == "sqlite":
+            conn.execute(text("ALTER TABLE machines ADD COLUMN repair_duration_minutes FLOAT"))
+        # Other dialects aren't used by this project; intentionally not handled.
