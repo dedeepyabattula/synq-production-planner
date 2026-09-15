@@ -420,12 +420,12 @@ def seed_furniture_factory(db: Session) -> Factory:
         ("ORD-F003", shelf.id, 3, OrderPriority.NORMAL, now + timedelta(hours=120)),
         ("ORD-F004", table.id, 2, OrderPriority.LOW, now + timedelta(hours=168)),
     ]
-       for code, pid, qty, priority, deadline in orders_data:
+    for code, pid, qty, priority, deadline in orders_data:
         db.add(Order(factory_id=factory.id, product_id=pid, order_code=code,
                      quantity=qty, priority=priority, deadline=deadline,
                      status=OrderStatus.PENDING))
 
-    db.commit()
+        db.commit()
     _backfill_repair_data(db, factory, default_repair_minutes=120, maintenance_worker_name="Frank Reyes")
     return factory
 
