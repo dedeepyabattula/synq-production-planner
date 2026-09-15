@@ -6,7 +6,6 @@ works identically with user-created factories.
 
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-
 from app.models import (
     Factory, Product, ProductionWorkflow, ProductionStep,
     Machine, MachineCapability, Worker, WorkerSkill,
@@ -15,49 +14,13 @@ from app.models import (
 )
 
 
-def _backfill_repair_data(db: Session, factory: Factory, default_repair_minutes: float, maintenance_worker_name: str) -> None:
-    """
-    Ensure this factory has at least one available worker with the
-    "maintenance" skill, and that every machine has a configured
-    repair_duration_minutes — backfilling either if missing.
-
-    Safe to call repeatedly (idempotent): needed because seeding a factory
-    that already exists just returns it as-is (see the `existing` checks
-    below), so a demo factory created before this feature existed wouldn't
-    otherwise ever pick up the new maintenance worker / repair durations.
-    Used by the repair-based recovery strategy in simulation.py.
-    """
-    machines = db.query(Machine).filter(Machine.factory_id == factory.id).all()
-    changed = False
-    for m in machines:
-        if m.repair_duration_minutes is None:
-            m.repair_duration_minutes = default_repair_minutes
-            changed = True
-
-    workers = db.query(Worker).filter(Worker.factory_id == factory.id).all()
-    has_maintenance = any(
-        w.available and any(s.skill == "maintenance" for s in w.skills)
-        for w in workers
-    )
-    if not has_maintenance:
-        w = Worker(factory_id=factory.id, name=maintenance_worker_name, shift="FLEX",
-                   available=True, max_overtime_hours=4)
-        db.add(w)
-        db.flush()
-        db.add(WorkerSkill(worker_id=w.id, skill="maintenance"))
-        changed = True
-
-    if changed:
-        db.commit()
-
-
 def seed_ev_battery_factory(db: Session) -> Factory:
     """Create an EV Battery Manufacturing demo factory."""
     # Check if already seeded
     existing = db.query(Factory).filter(Factory.name == "EV Battery Plant", Factory.is_demo == True).first()
     if existing:
-        _backfill_repair_data(db, existing, default_repair_minutes=180, maintenance_worker_name="Robert Diaz")
         return existing
+
 
     factory = Factory(name="EV Battery Plant", industry="EV Battery Manufacturing",
                       description="Electric vehicle battery cell, module, and pack manufacturing facility.",
@@ -218,16 +181,14 @@ def seed_ev_battery_factory(db: Session) -> Factory:
                      quantity=qty, priority=priority, deadline=deadline,
                      status=OrderStatus.PENDING))
 
-        db.commit()
-    _backfill_repair_data(db, factory, default_repair_minutes=180, maintenance_worker_name="Robert Diaz")
-    return factory
+           db.commit()
+            return factory
 
 
 def seed_furniture_factory(db: Session) -> Factory:
     """Create a Furniture Manufacturing demo factory."""
     existing = db.query(Factory).filter(Factory.name == "Craftwood Furniture", Factory.is_demo == True).first()
     if existing:
-        _backfill_repair_data(db, existing, default_repair_minutes=120, maintenance_worker_name="Frank Reyes")
         return existing
 
     factory = Factory(name="Craftwood Furniture", industry="Furniture Manufacturing",
@@ -425,9 +386,8 @@ def seed_furniture_factory(db: Session) -> Factory:
                      quantity=qty, priority=priority, deadline=deadline,
                      status=OrderStatus.PENDING))
 
-        db.commit()
-    _backfill_repair_data(db, factory, default_repair_minutes=120, maintenance_worker_name="Frank Reyes")
-    return factory
+            db.commit()
+            return factory
 
 
 def seed_all(db: Session) -> list:
