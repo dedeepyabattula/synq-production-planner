@@ -218,7 +218,8 @@ def seed_ev_battery_factory(db: Session) -> Factory:
                      quantity=qty, priority=priority, deadline=deadline,
                      status=OrderStatus.PENDING))
 
-    db.commit()
+        db.commit()
+    _backfill_repair_data(db, factory, default_repair_minutes=180, maintenance_worker_name="Robert Diaz")
     return factory
 
 
@@ -226,6 +227,7 @@ def seed_furniture_factory(db: Session) -> Factory:
     """Create a Furniture Manufacturing demo factory."""
     existing = db.query(Factory).filter(Factory.name == "Craftwood Furniture", Factory.is_demo == True).first()
     if existing:
+        _backfill_repair_data(db, existing, default_repair_minutes=120, maintenance_worker_name="Frank Reyes")
         return existing
 
     factory = Factory(name="Craftwood Furniture", industry="Furniture Manufacturing",
