@@ -143,9 +143,10 @@ def generate_schedule(
     name: str = "Auto Schedule",
     excluded_machine_ids: Set[int] = None,
     excluded_worker_ids: Set[int] = None,
-    order_overrides: Dict[int, Dict] = None,
+   order_overrides: Dict[int, Dict] = None,
     strategy: str = "default",
     commit: bool = True,
+    machine_available_from: Dict[int, float] = None,
 ) -> Tuple[Optional[Schedule], List[Dict[str, Any]]]:
     """
     Generate a deterministic production schedule.
