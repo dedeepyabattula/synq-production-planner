@@ -198,13 +198,20 @@ def generate_schedule(
     # Sort orders by effective priority (CRITICAL first) then deadline (earliest first)
     orders.sort(key=lambda o: (-PRIORITY_WEIGHT.get(effective_priority[o.id], 10), o.deadline))
 
-    excluded_m = excluded_machine_ids or set()
+       excluded_m = excluded_machine_ids or set()
     excluded_w = excluded_worker_ids or set()
+    machine_ready_from = machine_available_from or {}
 
-    # Track machine and worker availability (next available time)
-    machine_avail: Dict[int, float] = {m.id: 0.0 for m in machines if m.id not in excluded_m}
+    # Track machine and worker availability (next available time). A machine
+    # in machine_ready_from starts "available" only at its repair-completion
+    # time instead of 0 — everything else about the scheduling loop is
+    # unchanged, so tasks needing that machine naturally wait, tasks that
+    # don't need it schedule normally in parallel, and the delay propagates
+    # to dependents through the existing earliest_start/step_finish_time logic.
+    machine_avail: Dict[int, float] = {
+        m.id: machine_ready_from.get(m.id, 0.0) for m in machines if m.id not in excluded_m
+    }
     worker_avail: Dict[int, float] = {w.id: 0.0 for w in workers if w.id not in excluded_w}
-
     # Track when each step for each order finishes (for dependency resolution)
     step_finish_time: Dict[str, float] = {}  # "order_id-step_id" -> finish_time
 
