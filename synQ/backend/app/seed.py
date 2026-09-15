@@ -425,7 +425,8 @@ def seed_furniture_factory(db: Session) -> Factory:
                      quantity=qty, priority=priority, deadline=deadline,
                      status=OrderStatus.PENDING))
 
-    db.commit()
+       db.commit()
+    _backfill_repair_data(db, factory, default_repair_minutes=120, maintenance_worker_name="Frank Reyes")
     return factory
 
 
